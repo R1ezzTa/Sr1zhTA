@@ -8,8 +8,8 @@ using FftSharp;
 
 
 // ========================================================================
-// @Title:       多功能串口助手
-// @Description: 串口通信、波形实时绘制、FFT 频谱分析
+// @Title:       Multi functional serial helper
+// @Description: Serial communication, real-time waveform drawing, FFT spectrum analysis
 // @Author:      R1ezzTa
 // @Date:        2025
 // @Version:     1.0
@@ -21,7 +21,7 @@ namespace SerialHelperByR1ezzTa
     {
 
         // ----------------------------------------
-        // @Module: 串口通信
+        // @Module: Serial communication
         // ----------------------------------------
         SerialPort serialPort = new SerialPort();
         private long rxCount = 0; 
@@ -29,26 +29,26 @@ namespace SerialHelperByR1ezzTa
         System.Windows.Forms.Timer autoSendTimer = new System.Windows.Forms.Timer();
 
         // ----------------------------------------
-        // @Module: 绘图变量
+        // @Module: Drawing variables
         // ----------------------------------------
 
-        // 波形数据缓冲区
+        // Waveform data buffer
         double[] dataTarget = new double[500];
         double[] dataActual = new double[500];
 
-        //扫描光标
+        //Scan cursor
         int nextDataIndex = 0;
 
-        //屏幕刷新定时器
+        //Screen refresh timer
         System.Windows.Forms.Timer plotTimer = new System.Windows.Forms.Timer();
 
-        // 扫描线
+        // scan line
         ScottPlot.Plottables.VerticalLine vLine;
 
-        //仿真波形相位
+        //Simulated waveform phase
         double waveformPhase = 0;
 
-        //最大波形长度
+        //Maximum waveform length
         int maxDataCount = 5000;
 
         public Form1()
@@ -60,52 +60,52 @@ namespace SerialHelperByR1ezzTa
         }
 
 
-        //@Event: 窗体加载
+        //@Event: Form loading
         private void Form1_Load(object sender, EventArgs e)
         {
             // ----------------------------------------
-            // @Module: 初始化串口列表
+            // @Module: Initialize serial port list
             // ----------------------------------------
             string[] ports = SerialPort.GetPortNames();
 
-            //把名字加到 cbbPort 下拉框里
+            //Add the name to the cbbPort dropdown menu
             cbbPort.Items.Clear();
             cbbPort.Items.AddRange(ports);
 
-            //如果有串口，默认选中第一个
+            //If there is a serial port, the first one is selected by default
             if (cbbPort.Items.Count > 0)
             {
                 cbbPort.SelectedIndex = 0;
             }
 
-            //给波特率下拉框填点常用值
+            //Fill in common values for the baud rate dropdown menu
             string[] baudRates = new string[] {
                 "1200", "2400", "4800", "9600", "19200",
                 "38400", "57600", "74880", "115200",
                 "230400", "460800", "921600"
             };
             cbbBaud.Items.AddRange(baudRates);
-            cbbBaud.SelectedItem = "9600"; 
+            cbbBaud.SelectedItem = "9600";
 
 
 
-            // 绑定接收事件
+            // Bind to receive events
             serialPort.DataReceived += SerialPort_DataReceived;
 
-            //默认选中 ASCII 模式
+            //Default selection of ASCII mode
             cbbRxMode.SelectedIndex = 0; 
             cbbTxMode.SelectedIndex = 0;
 
-            autoSendTimer.Interval = 1000; // 默认1秒
+            autoSendTimer.Interval = 1000; //Default 1 second
             autoSendTimer.Tick += AutoSendTimer_Tick;
 
             // ----------------------------------------
-            // @Module: 初始化绘图
+            // @Module: Initialize drawing
             // ----------------------------------------
 
-            
 
-            // 添加波形线
+
+            // Add waveform lines
             var line1 = formsPlot1.Plot.Add.Signal(dataTarget);
             line1.Color = ScottPlot.Colors.Red;     
             line1.LineWidth = 1;
@@ -116,29 +116,29 @@ namespace SerialHelperByR1ezzTa
             line2.LineWidth =1;
             line2.LegendText = "Actual";
 
-            //添加扫描线
+            //Add scan line
             vLine = formsPlot1.Plot.Add.VerticalLine(0);
             vLine.Color = ScottPlot.Colors.Green;   
             vLine.LineWidth = 1;                   
-            vLine.LinePattern = ScottPlot.LinePattern.Dashed; // 虚线
+            vLine.LinePattern = ScottPlot.LinePattern.Dashed;
 
-            //白底黑字
+            
             formsPlot1.Plot.FigureBackground.Color = ScottPlot.Colors.White;
             formsPlot1.Plot.DataBackground.Color = ScottPlot.Colors.White;
             formsPlot1.Plot.Axes.Color(ScottPlot.Colors.Black);           
             formsPlot1.Plot.Grid.MajorLineColor = ScottPlot.Colors.Black.WithAlpha(0.15);
 
-            //锁定 X 轴范围
+            //Lock the X-axis range
             formsPlot1.Plot.Axes.SetLimitsX(0, maxDataCount);
 
-            // 启动绘图刷新定时器
+            // Start the drawing refresh timer
             plotTimer.Interval = 50;
             plotTimer.Tick += PlotTimer_Tick;
             plotTimer.Start();
         }
 
 
-        //@Event: 串口开关按钮
+        //@Event: Serial port switch button
         private void btnOpen_Click(object sender, EventArgs e)
         {
             try
@@ -153,7 +153,7 @@ namespace SerialHelperByR1ezzTa
                     btnOpen.BackColor = Color.Salmon;
 
 
-                    // 锁死，防止运行中修改
+                    // Locked to prevent modifications during operation
                     cbbPort.Enabled = false;
                     cbbBaud.Enabled = false;
                 }
@@ -175,12 +175,12 @@ namespace SerialHelperByR1ezzTa
         }
 
 
-        //@Function: 日志输出到接收窗口
+        //@Function: Log output to the receiving window
         private void LogToWindow(string text, Color color)
         {
             this.Invoke((MethodInvoker)delegate
             {
-                if (rtbReceive.TextLength > 50000) rtbReceive.Clear(); // 防止内存溢出
+                if (rtbReceive.TextLength > 50000) rtbReceive.Clear(); // Prevent memory overflow
 
                 rtbReceive.SelectionStart = rtbReceive.TextLength;
                 rtbReceive.SelectionLength = 0;
@@ -190,7 +190,7 @@ namespace SerialHelperByR1ezzTa
             });
         }
 
-        //@Function: 字节数组转 HEX 字符串
+        //@Function: Byte array to HEX string conversion
         private string ByteToHex(byte[] data)
         {
             StringBuilder sb = new StringBuilder();
@@ -198,18 +198,18 @@ namespace SerialHelperByR1ezzTa
             return sb.ToString();
         }
 
-        //@Function: HEX 字符串转字节数组
+        //@Function: HEX string to byte array conversion
         private byte[] HexToByte(string msg)
         {
             msg = msg.Replace(" ", "").Replace("\r", "").Replace("\n", "");
-            if (msg.Length % 2 != 0) msg = msg.Insert(0, "0"); // 补齐偶数位
+            if (msg.Length % 2 != 0) msg = msg.Insert(0, "0"); // Fill in even numbers
             byte[] buffer = new byte[msg.Length / 2];
             for (int i = 0; i < buffer.Length; i++)
                 buffer[i] = Convert.ToByte(msg.Substring(i * 2, 2), 16);
             return buffer;
         }
 
-        //@Function: 串口数据接收事件
+        //@Event: Serial port data reception
         private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             if (!serialPort.IsOpen) return;
@@ -225,14 +225,14 @@ namespace SerialHelperByR1ezzTa
                 rxCount += n;
 
                 // ----------------------------------------
-                // @Module: 界面更新和变量共享
+                // @Module: Interface updates and variable sharing
                 // ----------------------------------------
                 this.Invoke((MethodInvoker)delegate
                 {
-                    //更新统计信息
+                    //update statistics
                     lblRxCount.Text = rxCount.ToString();
 
-                    //解码
+                    //decode
                     string displayMsg = "";
                     if (cbbRxMode.Text == "HEX")
                     {
@@ -243,18 +243,18 @@ namespace SerialHelperByR1ezzTa
                         displayMsg = System.Text.Encoding.UTF8.GetString(buf);
                     }
 
-                    //更新显示到接收窗口
+                    //Update display to receive window
                     LogToWindow(displayMsg, System.Drawing.Color.Black);
 
                     // ----------------------------------------
-                    // @Module: 波形解析
+                    // @Module: waveform analysis
                     // ----------------------------------------
                     if (tabControl1.SelectedIndex == 1 && cbbRxMode.Text == "ASCII")
                     {
                         try
                         {
                             string cleanData = displayMsg.Trim();
-                            //输入切割
+                            //Input cutting
                             string[] parts = cleanData.Split(',');
 
                             if (parts.Length >= 2)
@@ -278,26 +278,26 @@ namespace SerialHelperByR1ezzTa
                 });
             }
 
-            //@Event: 异常断开处理
+            //@Event: Abnormal disconnection handling
             catch (Exception ex)
             {
                 this.Invoke((MethodInvoker)delegate
                 {
-                    // 强制关闭串口
+                    // Forcefully close serial port
                     if (serialPort.IsOpen) serialPort.Close();
 
-                    // 更新按钮状态
+                    // Update button status
                     btnOpen.Text = "打开串口";
                     btnOpen.BackColor = Color.LightGreen;
                     MessageBox.Show ("状态：异常断开");
 
-                    // 自动刷新列表
+                    // Automatically refresh the list
                     btnRefresh_Click(null, null);
                 });
             }
         }
 
-        //@Event: 发送按钮
+        //@Event: Send button
         private void btnSend_Click(object sender, EventArgs e)
         {
             if (!serialPort.IsOpen) { MessageBox.Show("请先打开串口"); return; }
@@ -332,7 +332,7 @@ namespace SerialHelperByR1ezzTa
         }
 
 
-        //@Event: 清空接收窗口按钮
+        //@Event: Clear receiving window button
         private void btnClear_Click(object sender, EventArgs e)
         {
             rtbReceive.Clear();
@@ -341,7 +341,7 @@ namespace SerialHelperByR1ezzTa
 
         }
 
-        //@Event: 清零计数按钮
+        //@Event: Reset count button
         private void btnClearCount_Click(object sender, EventArgs e)
         {
             rxCount = 0;
@@ -353,11 +353,11 @@ namespace SerialHelperByR1ezzTa
         }
 
 
-        //@Event: 自动发送定时器滴答
+        //@Event: Automatically send timer tick
         private void AutoSendTimer_Tick(object sender, EventArgs e)
         {
             // ==========================================
-            //  模式 A: 串口
+            // Mode A: Serial
             // ==========================================
             /*
             if (serialPort.IsOpen)
@@ -371,15 +371,15 @@ namespace SerialHelperByR1ezzTa
             */
 
             // ==========================================
-            //  模式 B: 仿真
-            //  不需要插串口，直接调用测试函数
+            //  Mode B: Simulation
+            //  No need to plug in the serial port, simply call the test function
             // ==========================================
 
             RunTestSignalGenerator(); 
         }
 
 
-        //@Event: 自动发送
+        //@Event: automatically send
         private void chkAutoSend_CheckedChanged(object sender, EventArgs e)
         {
             if (chkAutoSend.Checked)
@@ -392,13 +392,13 @@ namespace SerialHelperByR1ezzTa
                     return;
                 }
 
-                //时间间隔
+                //time interval
                 if (int.TryParse(txtAutoSendMs.Text, out int interval) && interval > 0)
                 {
                     autoSendTimer.Interval = interval; 
                     autoSendTimer.Start();
 
-                    //锁死输入框，防止运行中修改时间
+                    //Lock the input box to prevent time modification during operation
                     txtAutoSendMs.Enabled = false;
                 }
                 else
@@ -414,10 +414,10 @@ namespace SerialHelperByR1ezzTa
             }
         }
 
-        //@Event: 绘图刷新定时器
+        //@Event: Drawing refresh timer
         private void PlotTimer_Tick(object sender, EventArgs e)
         {
-            // 时域 
+            // time domain
             if (tabControl1.SelectedIndex == 1)
             {
                 vLine.X = nextDataIndex;
@@ -429,33 +429,33 @@ namespace SerialHelperByR1ezzTa
                 formsPlot1.Refresh();
             }
 
-            // 频域
+            // frequency domain
             else if (tabControl1.SelectedIndex == 2)
             {
                 UpdateSpectrum(); 
             }
         }
 
-        //@Function: 更新频谱图
+        //@Function: Update spectrum diagram
         private void UpdateSpectrum()
         {
-            // 准备数据
+            // prepare data
             int fftLength = 4096;
             double[] paddedAudio = new double[fftLength];
-            // 将 dataTarget 的数据复制过来，不够的补0
+            // Copy the data from dataTarget and add 0 if it's not enough
             int len = Math.Min(dataTarget.Length, fftLength);
             Array.Copy(dataTarget, 0, paddedAudio, 0, len);
 
-            // 实例化窗口对象
+            // Instantiate window object
             var window = new FftSharp.Windows.Hanning();
             window.ApplyInPlace(paddedAudio);
 
-            //FFT 变换
+            //FFT 
             System.Numerics.Complex[] spectrum = FftSharp.FFT.Forward(paddedAudio);
             double[] power = FftSharp.FFT.Power(spectrum);
 
-            // 生成频率轴
-            // 假设采样率为 50Hz (因为 autoSendTimer=20ms)
+            // Generate frequency axis
+            // Assuming a sampling rate of 50Hz (because autoSendTimer=20ms)
             double sampleRate = 50;
             double[] freqs = FftSharp.FFT.FrequencyScale(power.Length, sampleRate);
 
@@ -469,32 +469,32 @@ namespace SerialHelperByR1ezzTa
             formsPlot2.Refresh();
         }
 
-        //@Function: 测试信号发生器 
+        //@Function: text signal generator
         private void RunTestSignalGenerator()
         {
-            // 步长，改大波形变密，改小波形变稀疏
+            // Step size, increase waveform density, decrease waveform sparsity
             waveformPhase += 0.2;
 
-            // 生成信号，模拟单片机发来的数据
-            // 信号 A: 纯净的正弦波
+            // Generate signals and simulate data sent by microcontrollers
+            // Signal A: Pure sine wave
             double signalA = 50 + 40 * Math.Sin(waveformPhase);
 
-            // 信号 B: 带噪声的余弦波
+            // Signal B: cosine wave with noise
             Random rnd = new Random();
-            double noise = (rnd.NextDouble() - 0.5) * 5; // -2.5 到 +2.5 的随机噪声
+            double noise = (rnd.NextDouble() - 0.5) * 5; // -Random noise ranging from 2.5 to+2.5
             double signalB = 50 + 30 * Math.Sin(waveformPhase) + 15 * Math.Sin(waveformPhase * 3) + noise;
 
-            //填入全局数组
+            //Fill in the global array
             dataTarget[nextDataIndex] = signalA;
             dataActual[nextDataIndex] = signalB;
 
-            //回环写入
+            //Loop Write
             nextDataIndex++;
             if (nextDataIndex >= dataTarget.Length) nextDataIndex = 0;
         }
 
 
-        //@Event: 刷新串口列表
+        //@Event: refresh serial port list
         private void btnRefresh_Click(object sender, EventArgs e)
         {
             if (serialPort.IsOpen)
