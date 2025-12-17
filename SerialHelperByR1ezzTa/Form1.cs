@@ -24,13 +24,15 @@ namespace SerialHelperByR1ezzTa
         // @Module: Serial communication
         // ----------------------------------------
         SerialPort serialPort = new SerialPort();
-        private long rxCount = 0; 
-        private long txCount = 0; 
+        private long rxCount = 0;
+        private long txCount = 0;
         System.Windows.Forms.Timer autoSendTimer = new System.Windows.Forms.Timer();
 
         // ----------------------------------------
         // @Module: Drawing variables
         // ----------------------------------------
+
+        private bool isWaveformPaused = false;
 
         // Waveform data buffer
         double[] dataTarget = new double[500];
@@ -93,7 +95,7 @@ namespace SerialHelperByR1ezzTa
             serialPort.DataReceived += SerialPort_DataReceived;
 
             //Default selection of ASCII mode
-            cbbRxMode.SelectedIndex = 0; 
+            cbbRxMode.SelectedIndex = 0;
             cbbTxMode.SelectedIndex = 0;
 
             autoSendTimer.Interval = 1000; //Default 1 second
@@ -107,25 +109,25 @@ namespace SerialHelperByR1ezzTa
 
             // Add waveform lines
             var line1 = formsPlot1.Plot.Add.Signal(dataTarget);
-            line1.Color = ScottPlot.Colors.Red;     
+            line1.Color = ScottPlot.Colors.Red;
             line1.LineWidth = 1;
             line1.LegendText = "Target";
 
             var line2 = formsPlot1.Plot.Add.Signal(dataActual);
-            line2.Color = ScottPlot.Colors.Blue;    
-            line2.LineWidth =1;
+            line2.Color = ScottPlot.Colors.Blue;
+            line2.LineWidth = 1;
             line2.LegendText = "Actual";
 
             //Add scan line
             vLine = formsPlot1.Plot.Add.VerticalLine(0);
-            vLine.Color = ScottPlot.Colors.Green;   
-            vLine.LineWidth = 1;                   
+            vLine.Color = ScottPlot.Colors.Green;
+            vLine.LineWidth = 1;
             vLine.LinePattern = ScottPlot.LinePattern.Dashed;
 
-            
+
             formsPlot1.Plot.FigureBackground.Color = ScottPlot.Colors.White;
             formsPlot1.Plot.DataBackground.Color = ScottPlot.Colors.White;
-            formsPlot1.Plot.Axes.Color(ScottPlot.Colors.Black);           
+            formsPlot1.Plot.Axes.Color(ScottPlot.Colors.Black);
             formsPlot1.Plot.Grid.MajorLineColor = ScottPlot.Colors.Black.WithAlpha(0.15);
 
             //Lock the X-axis range
@@ -209,7 +211,7 @@ namespace SerialHelperByR1ezzTa
             return buffer;
         }
 
-        //@Event: Serial port data reception
+        //@Event: Serial port data reception 
         private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             if (!serialPort.IsOpen) return;
@@ -229,10 +231,10 @@ namespace SerialHelperByR1ezzTa
                 // ----------------------------------------
                 this.Invoke((MethodInvoker)delegate
                 {
-                    //update statistics
+                    // update statistics
                     lblRxCount.Text = rxCount.ToString();
 
-                    //decode
+                    // 1. Get Raw Data
                     string displayMsg = "";
                     if (cbbRxMode.Text == "HEX")
                     {
@@ -243,69 +245,129 @@ namespace SerialHelperByR1ezzTa
                         displayMsg = System.Text.Encoding.UTF8.GetString(buf);
                     }
 
-                    //Update display to receive window
-                    LogToWindow(displayMsg, System.Drawing.Color.Black);
+                    // ==========================================
+                    // [INSERTED] Frame Header & Tail Parsing Logic
+                    // ==========================================
+                    string processedMsg = displayMsg;
+                    bool keepProcessing = true; // Valid flag
 
-                    // ----------------------------------------
-                    // @Module: waveform analysis
-                    // ----------------------------------------
-                    if (tabControl1.SelectedIndex == 1 && cbbRxMode.Text == "ASCII")
+                    // A. Process Rx Header
+                    if (chkRxHeader.Checked && !string.IsNullOrEmpty(txtRxHeader.Text))
                     {
-                        try
+                        string header = txtRxHeader.Text.Replace("\\r", "\r").Replace("\\n", "\n");
+                        int idx = processedMsg.IndexOf(header);
+
+                        if (idx >= 0)
                         {
-                            string cleanData = displayMsg.Trim();
-                            //Input cutting
-                            string[] parts = cleanData.Split(',');
+                            // Keep content AFTER the header
+                            processedMsg = processedMsg.Substring(idx + header.Length);
+                        }
+                        else
+                        {
+                            keepProcessing = false; // Header not found, discard
+                        }
+                    }
 
-                            if (parts.Length >= 2)
+                    // B. Process Rx Tail
+                    if (keepProcessing && chkRxTail.Checked && !string.IsNullOrEmpty(txtRxTail.Text))
+                    {
+                        string tail = txtRxTail.Text.Replace("\\r", "\r").Replace("\\n", "\n");
+                        int idx = processedMsg.IndexOf(tail);
+
+                        if (idx >= 0)
+                        {
+                            // Keep content BEFORE the tail
+                            processedMsg = processedMsg.Substring(0, idx);
+                        }
+                    }
+
+                    // ==========================================
+                    // [END] Logic
+                    // ==========================================
+
+                    // Only display and plot if data is valid (keepProcessing is true)
+                    if (keepProcessing)
+                    {
+                        // Update display to receive window (Using processedMsg)
+                        LogToWindow(processedMsg, System.Drawing.Color.Black);
+
+                        // ----------------------------------------
+                        // @Module: waveform analysis
+                        // ----------------------------------------
+                        if (tabControl1.SelectedIndex == 1 && cbbRxMode.Text == "ASCII")
+                        {
+                            if (isWaveformPaused) return;
+
+                            try
                             {
-                                if (double.TryParse(parts[0], out double val1) &&
-                                    double.TryParse(parts[1], out double val2))
+                                // Use processedMsg for waveform parsing
+                                string cleanData = processedMsg.Trim();
+                                string[] parts = cleanData.Split(',');
+
+                                if (parts.Length >= 2)
                                 {
-                                    dataTarget[nextDataIndex] = val1;
-                                    dataActual[nextDataIndex] = val2;
+                                    if (double.TryParse(parts[0], out double val1) &&
+                                        double.TryParse(parts[1], out double val2))
+                                    {
+                                        dataTarget[nextDataIndex] = val1;
+                                        dataActual[nextDataIndex] = val2;
 
-                                    nextDataIndex++;
-                                    if (nextDataIndex >= dataTarget.Length) nextDataIndex = 0;
+                                        nextDataIndex++;
+                                        if (nextDataIndex >= dataTarget.Length) nextDataIndex = 0;
 
-                                    
-                                    formsPlot1.Plot.Axes.SetLimitsX(0, maxDataCount);
+                                        formsPlot1.Plot.Axes.SetLimitsX(0, maxDataCount);
+                                    }
                                 }
                             }
+                            catch { }
                         }
-                        catch { }
                     }
                 });
             }
-
             //@Event: Abnormal disconnection handling
             catch (Exception ex)
             {
                 this.Invoke((MethodInvoker)delegate
                 {
-                    // Forcefully close serial port
                     if (serialPort.IsOpen) serialPort.Close();
-
-                    // Update button status
                     btnOpen.Text = "打开串口";
                     btnOpen.BackColor = Color.LightGreen;
-                    MessageBox.Show ("状态：异常断开");
-
-                    // Automatically refresh the list
+                    MessageBox.Show("状态：异常断开");
                     btnRefresh_Click(null, null);
                 });
             }
         }
 
-        //@Event: Send button
+        //@Event: Send button 
         private void btnSend_Click(object sender, EventArgs e)
         {
             if (!serialPort.IsOpen) { MessageBox.Show("请先打开串口"); return; }
+
             string str = txtSend.Text;
             if (string.IsNullOrEmpty(str)) return;
 
             try
             {
+                // ==========================================
+                // [INSERTED] Frame Header & Tail Appending Logic
+                // ==========================================
+
+                // 1. Append Header
+                if (chkTxHeader.Checked && !string.IsNullOrEmpty(txtTxHeader.Text))
+                {
+                    string header = txtTxHeader.Text.Replace("\\r", "\r").Replace("\\n", "\n");
+                    str = header + str;
+                }
+
+                // 2. Append Tail
+                if (chkTxTail.Checked && !string.IsNullOrEmpty(txtTxTail.Text))
+                {
+                    string tail = txtTxTail.Text.Replace("\\r", "\r").Replace("\\n", "\n");
+                    str = str + tail;
+                }
+                // ==========================================
+
+                // Send Logic (Uses the modified 'str')
                 if (cbbTxMode.Text == "HEX")
                 {
                     byte[] data = HexToByte(str);
@@ -319,7 +381,7 @@ namespace SerialHelperByR1ezzTa
                 }
 
                 LogToWindow("[发送] " + str, Color.SeaGreen);
-                lblTxCount.Text = txCount.ToString(); 
+                lblTxCount.Text = txCount.ToString();
             }
             catch (FormatException)
             {
@@ -375,7 +437,7 @@ namespace SerialHelperByR1ezzTa
             //  No need to plug in the serial port, simply call the test function
             // ==========================================
 
-            RunTestSignalGenerator(); 
+            RunTestSignalGenerator();
         }
 
 
@@ -388,14 +450,14 @@ namespace SerialHelperByR1ezzTa
                 if (!serialPort.IsOpen)
                 {
                     MessageBox.Show("请先打开串口！");
-                    chkAutoSend.Checked = false; 
+                    chkAutoSend.Checked = false;
                     return;
                 }
 
                 //time interval
                 if (int.TryParse(txtAutoSendMs.Text, out int interval) && interval > 0)
                 {
-                    autoSendTimer.Interval = interval; 
+                    autoSendTimer.Interval = interval;
                     autoSendTimer.Start();
 
                     //Lock the input box to prevent time modification during operation
@@ -409,7 +471,7 @@ namespace SerialHelperByR1ezzTa
             }
             else
             {
-                autoSendTimer.Stop(); 
+                autoSendTimer.Stop();
                 txtAutoSendMs.Enabled = true;
             }
         }
@@ -432,7 +494,7 @@ namespace SerialHelperByR1ezzTa
             // frequency domain
             else if (tabControl1.SelectedIndex == 2)
             {
-                UpdateSpectrum(); 
+                UpdateSpectrum();
             }
         }
 
@@ -521,7 +583,106 @@ namespace SerialHelperByR1ezzTa
 
         }
 
-        
+        //@Event: Pause/Resume drawing button
+        private void btnPause_Click(object sender, EventArgs e)
+        {
+            isWaveformPaused = !isWaveformPaused;
+
+
+            if (isWaveformPaused)
+            {
+                btnPause.Text = "继续绘图";
+                btnPause.BackColor = Color.LightGreen;
+            }
+            else
+            {
+                btnPause.Text = "暂停";
+                btnPause.BackColor = Color.LightSalmon;
+            }
+        }
+
+        private void btnSaveData_Click(object sender, EventArgs e)
+        {
+            if (dataTarget == null || dataActual == null)
+            {
+                MessageBox.Show("没有数据可保存！");
+                return;
+            }
+            //auto pause
+            bool wasPaused = isWaveformPaused;
+            if (!isWaveformPaused)
+            {
+                btnPause_Click(null, null);
+            }
+
+
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "CSV 文件 (*.csv)|*.csv|文本文件 (*.txt)|*.txt";
+            sfd.FileName = "WaveformData_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            sfd.Title = "导出波形数据";
+
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    using (StreamWriter sw = new StreamWriter(sfd.FileName))
+                    {
+                        sw.WriteLine("Index,Target_Value,Actual_Value");
+
+                        for (int i = 0; i < maxDataCount; i++)
+                        {
+                            string line = string.Format("{0},{1},{2}", i, dataTarget[i], dataActual[i]);
+                            sw.WriteLine(line);
+                        }
+                    }
+                    MessageBox.Show("保存成功！\n路径：" + sfd.FileName);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("保存失败：" + ex.Message);
+                }
+            }
+
+            if (!wasPaused)
+            {
+                btnPause_Click(null, null);
+            }
+        }
+
+        private void btnSaveImage_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "PNG 图片|*.png|JPG 图片|*.jpg";
+            sfd.FileName = "Waveform_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                formsPlot1.Plot.SavePng(sfd.FileName, 800, 600);
+                MessageBox.Show("图片已保存！");
+            }
+        }
+
+        private void btnSaveSpecImg_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "PNG 图片|*.png|JPG 图片|*.jpg";
+            sfd.FileName = "Spectrum_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            sfd.Title = "保存频谱分析图";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    formsPlot2.Plot.SavePng(sfd.FileName, 800, 600);
+                    MessageBox.Show("频谱图保存成功！");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("保存失败：" + ex.Message);
+                }
+            }
+        }
     }
 
 }
