@@ -69,12 +69,14 @@
             tabPage2 = new TabPage();
             formsPlot1 = new ScottPlot.WinForms.FormsPlot();
             panel1 = new Panel();
+            lblCursorInfo = new Label();
+            rbMeasureActual = new RadioButton();
+            rbMeasureTarget = new RadioButton();
+            chkShowCursors = new CheckBox();
             btnSaveImage = new Button();
             btnSaveData = new Button();
             btnPause = new Button();
             chkAutoScroll = new CheckBox();
-            checkBox3 = new CheckBox();
-            checkBox2 = new CheckBox();
             tabPage3 = new TabPage();
             formsPlot2 = new ScottPlot.WinForms.FormsPlot();
             panel2 = new Panel();
@@ -557,18 +559,62 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(lblCursorInfo);
+            panel1.Controls.Add(rbMeasureActual);
+            panel1.Controls.Add(rbMeasureTarget);
+            panel1.Controls.Add(chkShowCursors);
             panel1.Controls.Add(btnSaveImage);
             panel1.Controls.Add(btnSaveData);
             panel1.Controls.Add(btnPause);
             panel1.Controls.Add(chkAutoScroll);
-            panel1.Controls.Add(checkBox3);
-            panel1.Controls.Add(checkBox2);
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(5, 4);
             panel1.Margin = new Padding(5, 4, 5, 4);
             panel1.Name = "panel1";
             panel1.Size = new Size(1109, 141);
             panel1.TabIndex = 0;
+            // 
+            // lblCursorInfo
+            // 
+            lblCursorInfo.AutoSize = true;
+            lblCursorInfo.Location = new Point(150, 27);
+            lblCursorInfo.Name = "lblCursorInfo";
+            lblCursorInfo.Size = new Size(136, 24);
+            lblCursorInfo.TabIndex = 13;
+            lblCursorInfo.Text = "（光标未开启）";
+            // 
+            // rbMeasureActual
+            // 
+            rbMeasureActual.AutoSize = true;
+            rbMeasureActual.Location = new Point(36, 98);
+            rbMeasureActual.Name = "rbMeasureActual";
+            rbMeasureActual.Size = new Size(89, 28);
+            rbMeasureActual.TabIndex = 12;
+            rbMeasureActual.Text = "测量蓝";
+            rbMeasureActual.UseVisualStyleBackColor = true;
+            // 
+            // rbMeasureTarget
+            // 
+            rbMeasureTarget.AutoSize = true;
+            rbMeasureTarget.Checked = true;
+            rbMeasureTarget.Location = new Point(36, 64);
+            rbMeasureTarget.Name = "rbMeasureTarget";
+            rbMeasureTarget.Size = new Size(89, 28);
+            rbMeasureTarget.TabIndex = 11;
+            rbMeasureTarget.TabStop = true;
+            rbMeasureTarget.Text = "测量红";
+            rbMeasureTarget.UseVisualStyleBackColor = true;
+            // 
+            // chkShowCursors
+            // 
+            chkShowCursors.AutoSize = true;
+            chkShowCursors.Location = new Point(36, 26);
+            chkShowCursors.Name = "chkShowCursors";
+            chkShowCursors.Size = new Size(108, 28);
+            chkShowCursors.TabIndex = 10;
+            chkShowCursors.Text = "光标测量";
+            chkShowCursors.UseVisualStyleBackColor = true;
+            chkShowCursors.CheckedChanged += chkShowCursors_CheckedChanged;
             // 
             // btnSaveImage
             // 
@@ -592,7 +638,7 @@
             // 
             // btnPause
             // 
-            btnPause.Location = new Point(630, 58);
+            btnPause.Location = new Point(641, 73);
             btnPause.Name = "btnPause";
             btnPause.Size = new Size(112, 34);
             btnPause.TabIndex = 7;
@@ -605,35 +651,13 @@
             chkAutoScroll.AutoSize = true;
             chkAutoScroll.Checked = true;
             chkAutoScroll.CheckState = CheckState.Checked;
-            chkAutoScroll.Location = new Point(434, 88);
+            chkAutoScroll.Location = new Point(641, 25);
             chkAutoScroll.Margin = new Padding(5, 4, 5, 4);
             chkAutoScroll.Name = "chkAutoScroll";
             chkAutoScroll.Size = new Size(108, 28);
             chkAutoScroll.TabIndex = 6;
             chkAutoScroll.Text = "自动滚屏";
             chkAutoScroll.UseVisualStyleBackColor = true;
-            // 
-            // checkBox3
-            // 
-            checkBox3.AutoSize = true;
-            checkBox3.Location = new Point(434, 52);
-            checkBox3.Margin = new Padding(5, 4, 5, 4);
-            checkBox3.Name = "checkBox3";
-            checkBox3.Size = new Size(126, 28);
-            checkBox3.TabIndex = 5;
-            checkBox3.Text = "显示实际值";
-            checkBox3.UseVisualStyleBackColor = true;
-            // 
-            // checkBox2
-            // 
-            checkBox2.AutoSize = true;
-            checkBox2.Location = new Point(434, 17);
-            checkBox2.Margin = new Padding(5, 4, 5, 4);
-            checkBox2.Name = "checkBox2";
-            checkBox2.Size = new Size(126, 28);
-            checkBox2.TabIndex = 4;
-            checkBox2.Text = "显示目标值";
-            checkBox2.UseVisualStyleBackColor = true;
             // 
             // tabPage3
             // 
@@ -739,8 +763,6 @@
         private TextBox txtSend;
         private Panel panel1;
         private CheckBox chkAutoScroll;
-        private CheckBox checkBox3;
-        private CheckBox checkBox2;
         private ScottPlot.WinForms.FormsPlot formsPlot1;
         private ScottPlot.WinForms.FormsPlot formsPlot2;
         private Panel panel2;
@@ -766,5 +788,9 @@
         private CheckBox chkTxTail;
         private TextBox txtTxHeader;
         private CheckBox chkTxHeader;
+        private RadioButton rbMeasureActual;
+        private RadioButton rbMeasureTarget;
+        private CheckBox chkShowCursors;
+        private Label lblCursorInfo;
     }
 }

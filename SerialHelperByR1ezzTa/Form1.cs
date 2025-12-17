@@ -34,6 +34,10 @@ namespace SerialHelperByR1ezzTa
 
         private bool isWaveformPaused = false;
 
+        //cursor
+        ScottPlot.Plottables.VerticalLine cursorA;
+        ScottPlot.Plottables.VerticalLine cursorB;
+
         // Waveform data buffer
         double[] dataTarget = new double[500];
         double[] dataActual = new double[500];
@@ -132,6 +136,26 @@ namespace SerialHelperByR1ezzTa
 
             //Lock the X-axis range
             formsPlot1.Plot.Axes.SetLimitsX(0, maxDataCount);
+
+
+            //cursor initialize
+            cursorA = formsPlot1.Plot.Add.VerticalLine(100);
+            cursorA.Color = ScottPlot.Colors.Orange;
+            cursorA.LineWidth = 2;
+            cursorA.LinePattern = ScottPlot.LinePattern.Dashed;
+            cursorA.Text = "A";
+            cursorA.IsDraggable = true;
+
+            cursorB = formsPlot1.Plot.Add.VerticalLine(200);
+            cursorB.Color = ScottPlot.Colors.Magenta;
+            cursorB.LineWidth = 2;
+            cursorB.LinePattern = ScottPlot.LinePattern.Dashed;
+            cursorB.Text = "B";
+            cursorB.IsDraggable = true;
+
+            // hide cursor
+            cursorA.IsVisible = chkShowCursors.Checked;
+            cursorB.IsVisible = chkShowCursors.Checked;
 
             // Start the drawing refresh timer
             plotTimer.Interval = 50;
@@ -489,6 +513,8 @@ namespace SerialHelperByR1ezzTa
                     formsPlot1.Plot.Axes.SetLimitsX(0, maxDataCount);
                 }
                 formsPlot1.Refresh();
+
+                UpdateCursorInfo();
             }
 
             // frequency domain
@@ -601,6 +627,7 @@ namespace SerialHelperByR1ezzTa
             }
         }
 
+        //@Event: save data or image
         private void btnSaveData_Click(object sender, EventArgs e)
         {
             if (dataTarget == null || dataActual == null)
@@ -682,6 +709,63 @@ namespace SerialHelperByR1ezzTa
                     MessageBox.Show("保存失败：" + ex.Message);
                 }
             }
+        }
+
+        //@Function: update cursor info
+        private void UpdateCursorInfo()
+        {
+            if (cursorA == null || cursorB == null) return;
+
+            if (chkShowCursors.Checked == false) return;
+
+            int idxA = (int)cursorA.X;
+            int idxB = (int)cursorB.X;
+
+            if (idxA < 0) idxA = 0;
+            if (idxA >= maxDataCount) idxA = maxDataCount - 1;
+
+            if (idxB < 0) idxB = 0;
+            if (idxB >= maxDataCount) idxB = maxDataCount - 1;
+
+            double valA = 0, valB = 0;
+            string targetName = "";
+
+            if (rbMeasureTarget.Checked)
+            {
+                valA = dataTarget[idxA];
+                valB = dataTarget[idxB];
+                targetName = "Target";
+            }
+            else
+            {
+                valA = dataActual[idxA];
+                valB = dataActual[idxB];
+                targetName = "Actual";
+            }
+
+            int diffX = idxB - idxA;
+            double diffY = valB - valA;
+
+            lblCursorInfo.Text = $"{targetName} | A[{idxA}]:{valA:F2}  B[{idxB}]:{valB:F2} | ΔX:{diffX}  ΔY:{diffY:F2}";
+        }
+
+        //@Event: open/close cursor
+        private void chkShowCursors_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cursorA == null || cursorB == null) return;
+
+            bool isVisible = chkShowCursors.Checked;
+
+            //control visiable
+            cursorA.IsVisible = isVisible;
+            cursorB.IsVisible = isVisible;
+
+            rbMeasureTarget.Enabled = isVisible;
+            rbMeasureActual.Enabled = isVisible;
+
+            if (!isVisible) lblCursorInfo.Text = "光标已关闭 (勾选以启用)";
+
+            formsPlot1.Refresh();
         }
     }
 
